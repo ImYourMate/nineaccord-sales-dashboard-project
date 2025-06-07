@@ -45,6 +45,56 @@ function addEventListenersToFilters() {
   document.getElementById('reset-filters').addEventListener('click', () => {
     window.location.reload();
   });
+
+  // --- NINE 글자에 클릭 이벤트 리스너 추가 시작 ---
+  const nineTrigger = document.getElementById('nine-trigger');
+  if (nineTrigger) {
+    nineTrigger.addEventListener('click', () => {
+      // 사용자에게 확인 메시지 띄우기
+      if (
+        !confirm(
+          '숨겨진 데이터 업데이트 기능을 실행하시겠습니까? 데이터 업데이트에는 시간이 걸릴 수 있습니다.'
+        )
+      ) {
+        return; // 사용자가 취소하면 아무것도 하지 않음
+      }
+
+      showLoading('mainReportTable'); // 로딩 메시지 표시
+      handleError(''); // 기존 에러 메시지 초기화
+
+      // 서버 측에서 세션 인증을 사용하므로 클라이언트에서 키를 전달할 필요 없음
+      const updateUrl = '/api/update-data';
+
+      fetch(updateUrl)
+        .then((response) => {
+          if (!response.ok) {
+            return response.json().then((errorData) => {
+              throw new Error(
+                errorData.message || `HTTP error! Status: ${response.status}`
+              );
+            });
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.status === 'success') {
+            alert('데이터 업데이트가 완료되었습니다. 페이지를 새로고침합니다.');
+            window.location.reload(); // 데이터 업데이트 후 페이지 새로고침
+          } else {
+            handleError(
+              `데이터 업데이트 실패: ${data.message} ${
+                data.details ? `(상세: ${data.details})` : ''
+              }`
+            );
+          }
+        })
+        .catch((error) => {
+          handleError(`데이터 업데이트 중 오류 발생: ${error.message}`);
+          console.error('Update error:', error);
+        });
+    });
+  }
+  // --- NINE 글자에 클릭 이벤트 리스너 추가 끝 ---
 }
 
 // --- resetAllFilters 함수는 이제 필요 없으므로 삭제합니다. ---

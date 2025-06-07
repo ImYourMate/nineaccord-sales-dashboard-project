@@ -19,6 +19,15 @@
         margin-bottom: 5px;
         font-size: 20px;
       }
+      /* NINE 트리거를 위한 스타일 추가 시작 */
+      #nine-trigger {
+        cursor: pointer; /* 마우스 오버 시 클릭 가능 커서로 변경 */
+        /* 만약 완전히 숨기고 싶다면 아래 주석을 풀어 사용 (권장하지 않음, 관리자도 찾기 어려워짐) */
+        /* opacity: 0; */
+        /* color: inherit; */
+        /* text-decoration: none; */
+      }
+      /* NINE 트리거를 위한 스타일 추가 끝 */
       .nav-container {
         display: flex;
         justify-content: flex-end;
@@ -213,7 +222,7 @@
     </style>
   </head>
   <body>
-    <h1>NINE ACCORD 판매현황</h1>
+    <h1><span id="nine-trigger">NINE</span> ACCORD 판매현황</h1>
     <div class="nav-container">
       <a
         href="{{ url_for('dashboard_main_view') }}"
