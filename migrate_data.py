@@ -1,78 +1,103 @@
-# migrate_data.py (구글 시트 연동 버전)
+# migrate_data.py (수정)
 
+import sqlite3
 import pandas as pd
 import gspread
-from gspread_dataframe import get_as_dataframe
-import sqlite3
-import os
+from google.oauth2.service_account import Credentials
 
-# 파일 경로 설정
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_NAME = os.path.join(BASE_DIR, 'sales.db')
-CREDENTIALS_PATH = os.path.join(BASE_DIR, 'google_credentials.json') # 인증키 경로
-# --- 수정: 구글 시트 이름 입력 ---
-GOOGLE_SHEET_NAME = "NINE ACCORD 판매현황" 
+# --- 상수 정의 ---
+DATABASE_NAME = 'sales.db'
+# 구글 시트 관련 설정
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
+GOOGLE_CREDENTIALS_FILE = 'google_credentials.json' # 구글 서비스 계정 키 파일
+GOOGLE_SHEET_NAME = 'NINE ACCORD 판매현황' # 액세스할 구글 시트 이름
 
 def clean_data(df):
-    # (clean_data 함수 내용은 변경 없음)
-    # ...
-    return df
-
-def get_data_from_google_sheet():
     """
-    gspread를 사용하여 구글 시트에서 데이터를 읽어 DataFrame으로 반환합니다.
+    Pandas DataFrame을 데이터베이스에 저장하기 전에 정제합니다.
+    - NOT NULL 제약 조건이 있는 컬럼의 빈 값을 처리합니다.
     """
-    gc = gspread.service_account(filename=CREDENTIALS_PATH)
-    spreadsheet = gc.open(GOOGLE_SHEET_NAME)
-    worksheet = spreadsheet.sheet1 # 첫 번째 시트를 가져옴
+    # '수량' 컬럼의 빈 값(NaN)을 0으로 채우고 정수형으로 변환
+    df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce').fillna(0).astype(int)
     
-    # 헤더를 포함한 모든 데이터를 가져와서 DataFrame으로 변환
-    df = get_as_dataframe(worksheet, evaluate_formulas=True)
+    # '재고' 컬럼도 동일하게 처리 (NULL을 허용하지만 계산 편의를 위해 0으로 채움)
+    df['stock'] = pd.to_numeric(df['stock'], errors='coerce').fillna(0).astype(int)
+
+    # 다른 NOT NULL 텍스트 컬럼들의 빈 값(NaN)을 빈 문자열('')로 채움
+    not_null_text_cols = ['warehouse', 'category', 'month_year', 'item_name']
+    for col in not_null_text_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna('').astype(str)
+            
+    # '시리즈' 컬럼은 NULL을 허용하므로 비워둬도 되지만, 일관성을 위해 처리
+    if 'series' in df.columns:
+        df['series'] = df['series'].fillna('').astype(str)
+
     return df
 
-def update_database_from_sheet():
+def migrate_google_sheet_to_db():
     """
-    구글 시트 데이터를 읽어 DB를 업데이트하는 메인 함수.
+    구글 시트의 데이터를 읽어 SQLite 데이터베이스로 이전합니다.
+    - 구글 시트 데이터를 정제한 후, 데이터베이스의 모든 기존 데이터를 삭제하고 새로 채웁니다.
     """
     conn = None
     try:
-        print("구글 시트에서 데이터 로드를 시작합니다...")
-        df = get_data_from_google_sheet()
+        # 1. 구글 시트 데이터 읽기
+        print("구글 시트 인증 및 데이터 로딩을 시작합니다...")
+        creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_FILE, scopes=SCOPES)
+        client = gspread.authorize(creds)
         
-        # 원본 데이터와 동일한 컬럼명이 되도록 수정
-        df.rename(columns={
-            '창고별': 'warehouse', '구분': 'category', '월별': 'month_year', 
-            '품목별': 'item_name', '수량': 'quantity', '시리즈': 'series', '재고': 'stock'
-        }, inplace=True)
+        spreadsheet = client.open(GOOGLE_SHEET_NAME)
+        worksheet = spreadsheet.get_worksheet(0)  # 첫 번째 시트를 선택
+        
+        # 시트 데이터를 Pandas DataFrame으로 변환
+        data = worksheet.get_all_records()
+        df = pd.DataFrame(data)
+        print(f"'{GOOGLE_SHEET_NAME}' 시트에서 {len(df)}개 행을 성공적으로 읽었습니다.")
 
+        # 엑셀 컬럼명 -> DB 컬럼명으로 변경
+        expected_columns = ['창고별', '구분', '월별', '품목별', '수량', '시리즈', '재고']
+        # 시트의 컬럼 순서나 이름이 다를 수 있으므로, 존재하는 컬럼만 선택하여 이름 변경
+        df = df[expected_columns] # 정확한 컬럼 순서와 이름으로 DataFrame 재구성
+        df.columns = ['warehouse', 'category', 'month_year', 'item_name', 'quantity', 'series', 'stock']
+
+        # 2. 데이터 정제
         df_cleaned = clean_data(df)
-        print(f"구글 시트에서 {len(df)}개 행을 읽어 데이터 정제를 완료했습니다.")
+        print("데이터 정제를 완료했습니다.")
 
+        # 3. 데이터베이스에 연결
         conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
 
+        # 4. 기존 테이블의 모든 데이터를 삭제 (초기화)
         cursor.execute("DELETE FROM sales_data")
         print(f"'sales_data' 테이블의 기존 데이터 {cursor.rowcount}개를 삭제했습니다.")
 
-        df_cleaned.to_sql('sales_data', conn, if_exists='append', index=False, chunksize=10000)
-        
+        # 5. 정제된 데이터를 테이블에 삽입
+        df_cleaned.to_sql('sales_data', conn, if_exists='append', index=False)
         conn.commit()
-        success_message = f"성공: 총 {len(df_cleaned)}개의 행이 'sales_data' 테이블로 새로 이전되었습니다."
-        print(success_message)
-        return True, success_message
 
+        print(f"성공: 총 {len(df_cleaned)}개의 정제된 행이 'sales_data' 테이블로 새로 이전되었습니다.")
+
+    except gspread.exceptions.SpreadsheetNotFound:
+        print(f"오류: 구글 시트 '{GOOGLE_SHEET_NAME}'를 찾을 수 없습니다.")
+        print("서비스 계정에 시트가 공유되었는지, 이름이 정확한지 확인하세요.")
     except Exception as e:
-        error_message = f"마이그레이션 중 알 수 없는 오류 발생: {e}"
-        print(error_message)
-        return False, error_message
+        print(f"마이그레이션 중 알 수 없는 오류 발생: {e}")
     finally:
         if conn:
             conn.close()
 
 if __name__ == '__main__':
     from database_setup import create_table
+    
+    # 테이블이 없는 경우를 대비해 생성 로직 실행
     print("테이블 구조를 확인 및 생성합니다...")
     create_table()
     
+    # 데이터 마이그레이션 실행
     print("\n데이터 마이그레이션을 시작합니다...")
-    update_database_from_sheet()
+    migrate_google_sheet_to_db()
