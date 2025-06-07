@@ -1,12 +1,14 @@
-# app/routes.py (최종 수정 완료)
+# app/routes.py (gevent 호환 최종 버전)
 
 import os
 import sys
 import subprocess
-import threading
 from flask import current_app, jsonify, request, render_template, session, redirect, url_for
 from .services import process_data, get_filter_options, process_item_data
 from . import cache
+
+# --- 수정: gevent 임포트 ---
+import gevent
 
 UPDATE_SECRET_KEY = os.environ.get('UPDATE_SECRET_KEY')
 
@@ -15,7 +17,6 @@ def run_migration_in_background(app):
     백그라운드에서 마이그레이션 스크립트를 실행하는 함수.
     Flask 앱 인스턴스를 인자로 받습니다.
     """
-    # with app.app_context()를 사용하여 전달받은 앱의 컨텍스트를 생성합니다.
     with app.app_context():
         try:
             python_executable = sys.executable
@@ -45,18 +46,17 @@ def trigger_update():
     if secret_key != UPDATE_SECRET_KEY:
         return jsonify({'status': 'error', 'message': 'Permission denied'}), 403
 
-    # --- ★★★ 수정된 부분 ★★★ ---
-    # current_app._get_current_object()를 통해 실제 앱 인스턴스를 가져옵니다.
+    # --- 수정: threading.Thread 대신 gevent.spawn 사용 ---
     app_context = current_app._get_current_object()
-    # 스레드를 생성할 때, 앱 인스턴스를 인자(args)로 전달합니다.
-    thread = threading.Thread(target=run_migration_in_background, args=[app_context])
-    thread.start()
+    gevent.spawn(run_migration_in_background, app_context)
 
     return jsonify({
         'status': 'success',
         'message': '데이터 업데이트 요청을 수락했습니다. 백그라운드에서 작업이 시작됩니다. 완료까지 몇 분 정도 소요될 수 있으며, 진행 상황은 Render 대시보드의 Logs 탭에서 확인할 수 있습니다.'
     })
 
+
+# --- 나머지 코드는 모두 동일 ---
 
 @current_app.route('/login', methods=['GET', 'POST'])
 def login():
