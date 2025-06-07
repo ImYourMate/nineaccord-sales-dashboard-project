@@ -1,209 +1,293 @@
-<style>
-  body {
-    font-family: Arial, '맑은 고딕', Malgun Gothic, sans-serif;
-    margin: 8px;
-    background-color: #f4f7f6;
-    color: #333;
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 5px;
-    font-size: 20px;
-  }
-  /* NINE 트리거를 위한 스타일 */
-  #nine-trigger {
-    cursor: pointer; /* 마우스 오버 시 클릭 가능 커서로 변경 */
-  }
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>NINE ACCORD - 메인 집계</title>
+    <style>
+      body {
+        font-family: Arial, '맑은 고딕', Malgun Gothic, sans-serif;
+        margin: 8px;
+        background-color: #f4f7f6;
+        color: #333;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 5px;
+        font-size: 20px;
+      }
+      .nav-container {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 0 10px 10px 10px;
+      }
+      .nav-container a {
+        padding: 8px 16px;
+        font-size: 14px;
+        text-decoration: none;
+        color: #fff;
+        background-color: #34495e;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+      }
+      .nav-container a:hover {
+        background-color: #2c3e50;
+      }
+      .nav-container a.active {
+        background-color: #3498db;
+        font-weight: bold;
+      }
+      .filter-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-end;
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 12px;
+      }
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .filter-group label {
+        font-weight: bold;
+        font-size: 12px;
+        margin: 0 0 2px;
+      }
+      .filter-group select {
+        font-size: 12px;
+        padding: 5px 7px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .slicer-list {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 5px 10px;
+        max-width: 800px;
+        min-height: 32px;
+        background-color: #fafafa;
+        border: 1px solid #ddd;
+        align-items: center;
+      }
+      .slicer-list label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .filter-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+      }
+      .filter-actions button {
+        color: white;
+        border: none;
+        padding: 7px 14px;
+        font-size: 12px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #apply-filters {
+        background-color: #3498db;
+      }
+      #reset-filters {
+        background-color: #e74c3c;
+      }
+      .table-container {
+        overflow-x: auto;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+      }
+      .loading-message,
+      .error-message {
+        padding: 20px;
+        text-align: center;
+        font-size: 14px;
+        color: #555;
+      }
+      .error-message {
+        color: red;
+      }
+      #mainReportTable {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 5px;
+        table-layout: fixed;
+        font-size: 12px;
+      }
+      #mainReportTable th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #2c3e50;
+        color: white;
+        padding: 7px 8px;
+        font-size: 12px;
+        white-space: nowrap;
+        border-right: 1px solid #4a627a;
+        text-align: center;
+      }
+      #mainReportTable td {
+        padding: 7px 8px;
+        text-align: right;
+        font-size: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        border-right: 1px solid #e0e0e0;
+        white-space: nowrap;
+      }
+      #mainReportTable tr:hover td {
+        background-color: #eaf5ff !important;
+      }
+      .subtotal-row td {
+        background-color: #fff4d6 !important;
+        font-weight: bold;
+      }
 
-  .nav-container {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 0 10px 10px 10px;
-  }
-  .nav-container a {
-    padding: 8px 16px;
-    font-size: 14px;
-    text-decoration: none;
-    color: #fff;
-    background-color: #34495e;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
-  .nav-container a:hover {
-    background-color: #2c3e50;
-  }
-  .nav-container a.active {
-    background-color: #3498db;
-    font-weight: bold;
-  }
-  .filter-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-end;
-    background-color: #fff;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    font-size: 12px;
-  }
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .filter-group label {
-    font-weight: bold;
-    font-size: 12px;
-    margin: 0 0 2px;
-  }
-  .filter-group select {
-    font-size: 12px;
-    padding: 5px 7px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-  }
-  .slicer-list {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 5px 10px;
-    max-width: 800px;
-    min-height: 32px;
-    background-color: #fafafa;
-    border: 1px solid #ddd;
-    align-items: center;
-  }
-  .slicer-list label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .filter-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 6px;
-  }
-  .filter-actions button {
-    color: white;
-    border: none;
-    padding: 7px 14px;
-    font-size: 12px;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  #apply-filters {
-    background-color: #3498db;
-  }
-  #reset-filters {
-    background-color: #e74c3c;
-  }
-  .table-container {
-    overflow-x: auto;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 10px;
-  }
-  .loading-message,
-  .error-message {
-    padding: 20px;
-    text-align: center;
-    font-size: 14px;
-    color: #555;
-  }
-  .error-message {
-    color: red;
-  }
-  #mainReportTable {
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 5px;
-    table-layout: fixed;
-    font-size: 12px;
-  }
-  #mainReportTable th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background-color: #2c3e50;
-    color: white;
-    padding: 7px 8px;
-    font-size: 12px;
-    white-space: nowrap;
-    border-right: 1px solid #4a627a;
-    text-align: center;
-  }
-  #mainReportTable td {
-    padding: 7px 8px;
-    text-align: right;
-    font-size: 12px;
-    border-bottom: 1px solid #e0e0e0;
-    border-right: 1px solid #e0e0e0;
-    white-space: nowrap;
-  }
-  #mainReportTable tr:hover td {
-    background-color: #eaf5ff !important;
-  }
-  .subtotal-row td {
-    background-color: #fff4d6 !important;
-    font-weight: bold;
-  }
+      #mainReportTable th:first-child {
+        text-align: left;
+        width: 220px;
+        padding-left: 5px !important;
+      }
+      .warehouse-row {
+        cursor: pointer;
+        background-color: #f0f0f0 !important;
+        border-top: 2px solid #d0d0d0;
+      }
+      .warehouse-row.open {
+        background-color: #e0e0e0 !important;
+      }
+      .warehouse-row td:first-child {
+        font-weight: bold;
+        text-align: left;
+        padding-left: 5px !important;
+      }
+      .category-row {
+        display: none;
+      }
+      .category-row.visible {
+        display: table-row;
+      }
+      .category-row td:first-child {
+        text-align: left;
+        padding-left: 20px !important;
+      }
+      .subtotal-row td:first-child {
+        text-align: left !important;
+        padding-left: 5px !important;
+      }
 
-  #mainReportTable th:first-child {
-    text-align: left;
-    width: 220px;
-    padding-left: 5px !important;
-  }
-  .warehouse-row {
-    cursor: pointer;
-    background-color: #f0f0f0 !important;
-    border-top: 2px solid #d0d0d0;
-  }
-  .warehouse-row.open {
-    background-color: #e0e0e0 !important;
-  }
-  .warehouse-row td:first-child {
-    font-weight: bold;
-    text-align: left;
-    padding-left: 5px !important;
-  }
-  .category-row {
-    display: none;
-  }
-  .category-row.visible {
-    display: table-row;
-  }
-  .category-row td:first-child {
-    text-align: left;
-    padding-left: 20px !important;
-  }
-  .subtotal-row td:first-child {
-    text-align: left !important;
-    padding-left: 5px !important;
-  }
-
-  td.negative {
-    color: red;
-  }
-  .total-cell {
-    font-weight: bold;
-    border-left: 2px solid #aab8c5;
-  }
-  .pct-positive {
-    color: #27ae60;
-  }
-  .pct-negative {
-    color: #e74c3c;
-  }
-  .chart-container {
-    width: 95%;
-    margin: 24px auto;
-    height: 450px;
-  }
-</style>
+      td.negative {
+        color: red;
+      }
+      .total-cell {
+        font-weight: bold;
+        border-left: 2px solid #aab8c5;
+      }
+      .pct-positive {
+        color: #27ae60;
+      }
+      .pct-negative {
+        color: #e74c3c;
+      }
+      .chart-container {
+        width: 95%;
+        margin: 24px auto;
+        height: 450px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NINE ACCORD 판매현황</h1>
+    <div class="nav-container">
+      <a
+        href="{{ url_for('dashboard_main_view') }}"
+        class="active"
+        >[메인집계]</a
+      >
+      <a href="{{ url_for('dashboard_item_view') }}">[품목집계]</a>
+    </div>
+    <div class="filter-container">
+      <div class="filter-group">
+        <label>창고 선택</label>
+        <div
+          id="warehouse-filter"
+          class="slicer-list"
+        ></div>
+      </div>
+      <div class="filter-group">
+        <label>구분(카테고리) 선택</label>
+        <div
+          id="category-filter"
+          class="slicer-list"
+        ></div>
+      </div>
+      <div class="filter-group">
+        <label for="main-year">집계년도</label>
+        <select id="main-year"></select>
+      </div>
+      <div class="filter-group">
+        <label for="comp-year">비교년도</label>
+        <select id="comp-year"></select>
+      </div>
+      <div class="filter-group">
+        <label for="start-month">시작월</label>
+        <select id="start-month"></select>
+      </div>
+      <div class="filter-group">
+        <label for="end-month">종료월</label>
+        <select id="end-month"></select>
+      </div>
+      <div class="filter-actions">
+        <button id="apply-filters">조회</button>
+        <button id="reset-filters">전체 초기화</button>
+      </div>
+    </div>
+    <div
+      id="mainTableContainer"
+      class="table-container"
+    >
+      <div
+        id="mainLoading"
+        class="loading-message"
+        style="display: none"
+      >
+        데이터를 불러오는 중...
+      </div>
+      <div
+        id="mainError"
+        class="error-message"
+        style="display: none"
+      ></div>
+      <table
+        id="mainReportTable"
+        style="display: none"
+      >
+        <thead id="tableHeader"></thead>
+        <tbody id="mainTableBody"></tbody>
+      </table>
+    </div>
+    <div class="chart-container">
+      <canvas id="barChart"></canvas>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  </body>
+</html>
