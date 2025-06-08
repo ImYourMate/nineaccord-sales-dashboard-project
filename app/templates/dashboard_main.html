@@ -19,6 +19,15 @@
         margin-bottom: 5px;
         font-size: 20px;
       }
+      /* NINE 트리거를 위한 스타일 */
+      #nine-trigger {
+        /* <- 이 스타일 블록을 추가/복구합니다. */
+        cursor: pointer; /* 마우스 오버 시 클릭 가능 커서로 변경 */
+        /* 만약 완전히 숨기고 싶다면 아래 주석을 풀어 사용 (권장하지 않음, 관리자도 찾기 어려워짐) */
+        /* opacity: 0; */
+        /* color: inherit; */
+        /* text-decoration: none; */
+      }
       .nav-container {
         display: flex;
         justify-content: flex-end;
@@ -128,7 +137,7 @@
         border-collapse: collapse;
         width: 100%;
         margin-top: 5px;
-        table-layout: auto;
+        table-layout: auto; /* table-layout: auto로 변경 */
         font-size: 12px;
       }
       #mainReportTable th {
@@ -139,17 +148,17 @@
         color: white;
         padding: 7px 8px;
         font-size: 12px;
-        white-space: normal;
+        white-space: normal; /* normal로 변경 */
         border-right: 1px solid #4a627a;
         text-align: center;
       }
       #mainReportTable td {
         padding: 7px 8px;
-        text-align: left;
+        text-align: left; /* left로 변경 */
         font-size: 12px;
         border-bottom: 1px solid #e0e0e0;
         border-right: 1px solid #e0e0e0;
-        white-space: normal;
+        white-space: normal; /* normal로 변경 */
       }
       #mainReportTable tr:hover td {
         background-color: #eaf5ff !important;
@@ -161,9 +170,9 @@
 
       #mainReportTable th:first-child {
         text-align: left;
-        width: auto;
+        width: auto; /* auto로 변경 */
         padding-left: 5px !important;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
       .warehouse-row {
         cursor: pointer;
@@ -177,7 +186,7 @@
         font-weight: bold;
         text-align: left;
         padding-left: 5px !important;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
       .category-row {
         display: none;
@@ -188,12 +197,12 @@
       .category-row td:first-child {
         text-align: left;
         padding-left: 20px !important;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
       .subtotal-row td:first-child {
         text-align: left !important;
         padding-left: 5px !important;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
 
       td.negative {
@@ -218,7 +227,7 @@
     </style>
   </head>
   <body>
-    <h1>NINE ACCORD 판매현황</h1>
+    <h1><span id="nine-trigger">NINE</span> ACCORD 판매현황</h1>
     <div class="nav-container">
       <a
         href="{{ url_for('dashboard_main_view') }}"
