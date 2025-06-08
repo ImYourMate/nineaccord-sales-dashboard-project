@@ -14,6 +14,7 @@ SCOPES = [
 ]
 GOOGLE_CREDENTIALS_FILE = 'google_credentials.json' # 구글 서비스 계정 키 파일
 GOOGLE_SHEET_NAME = 'NINE ACCORD 판매현황' # 액세스할 구글 시트 이름
+GOOGLE_WORKSHEET_NAME = '사이트DB' # <- 이 줄을 추가합니다. 불러올 특정 탭 이름
 
 def clean_data(df):
     """
@@ -51,12 +52,13 @@ def migrate_google_sheet_to_db():
         client = gspread.authorize(creds)
         
         spreadsheet = client.open(GOOGLE_SHEET_NAME)
-        worksheet = spreadsheet.get_worksheet(0)  # 첫 번째 시트를 선택
+        # worksheet = spreadsheet.get_worksheet(0)  # <- 이 줄을 주석 처리합니다.
+        worksheet = spreadsheet.worksheet(GOOGLE_WORKSHEET_NAME) # <- 이 줄로 변경합니다.
         
         # 시트 데이터를 Pandas DataFrame으로 변환
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
-        print(f"'{GOOGLE_SHEET_NAME}' 시트에서 {len(df)}개 행을 성공적으로 읽었습니다.")
+        print(f"'{GOOGLE_SHEET_NAME}' 시트의 '{GOOGLE_WORKSHEET_NAME}' 탭에서 {len(df)}개 행을 성공적으로 읽었습니다.")
 
         # 엑셀 컬럼명 -> DB 컬럼명으로 변경
         expected_columns = ['창고별', '구분', '월별', '품목별', '수량', '시리즈', '재고']
@@ -85,6 +87,9 @@ def migrate_google_sheet_to_db():
     except gspread.exceptions.SpreadsheetNotFound:
         print(f"오류: 구글 시트 '{GOOGLE_SHEET_NAME}'를 찾을 수 없습니다.")
         print("서비스 계정에 시트가 공유되었는지, 이름이 정확한지 확인하세요.")
+    except gspread.exceptions.WorksheetNotFound: # <- 이 부분 추가
+        print(f"오류: 구글 시트 '{GOOGLE_SHEET_NAME}'에서 탭 '{GOOGLE_WORKSHEET_NAME}'을(를) 찾을 수 없습니다.")
+        print("탭 이름이 정확한지 확인하세요.")
     except Exception as e:
         print(f"마이그레이션 중 알 수 없는 오류 발생: {e}")
     finally:
