@@ -180,8 +180,8 @@
       #itemReportTable {
         border-collapse: collapse;
         width: 100%;
+        table-layout: auto; /* auto로 변경 */
         font-size: 12px;
-        table-layout: fixed;
       }
       #itemReportTable th {
         position: sticky;
@@ -192,18 +192,19 @@
         padding: 7px 8px;
         border-right: 1px solid #4a627a;
         text-align: center;
+        white-space: normal; /* normal로 변경 */
       }
       #itemReportTable td {
         padding: 7px 8px;
-        text-align: left; /* 이 부분을 right -> left로 변경합니다. */
+        text-align: left; /* left로 변경 */
         border-bottom: 1px solid darkgray;
         border-right: 1px solid darkgray;
-        white-space: nowrap;
+        white-space: normal; /* normal로 변경 */
       }
       #itemReportTable .total-cell {
         font-weight: bold;
         border-left: 2px solid darkgray;
-        text-align: left; /* 이 부분을 추가합니다. */
+        text-align: left; /* left로 변경 */
       }
       #itemReportTable tr:hover td {
         background-color: #eaf5ff !important;
@@ -214,7 +215,7 @@
 
       #itemReportTable th:first-child {
         text-align: left;
-        width: 350px;
+        width: auto; /* auto로 변경 */
         padding-left: 5px !important;
       }
       #itemReportTable td:first-child {

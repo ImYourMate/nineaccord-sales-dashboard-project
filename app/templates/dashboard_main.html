@@ -19,14 +19,6 @@
         margin-bottom: 5px;
         font-size: 20px;
       }
-      /* NINE 트리거를 위한 스타일 */
-      #nine-trigger {
-        cursor: pointer; /* 마우스 오버 시 클릭 가능 커서로 변경 */
-        /* 만약 완전히 숨기고 싶다면 아래 주석을 풀어 사용 (권장하지 않음, 관리자도 찾기 어려워짐) */
-        /* opacity: 0; */
-        /* color: inherit; */
-        /* text-decoration: none; */
-      }
       .nav-container {
         display: flex;
         justify-content: flex-end;
@@ -136,7 +128,7 @@
         border-collapse: collapse;
         width: 100%;
         margin-top: 5px;
-        table-layout: fixed;
+        table-layout: auto; /* auto로 변경 */
         font-size: 12px;
       }
       #mainReportTable th {
@@ -147,17 +139,17 @@
         color: white;
         padding: 7px 8px;
         font-size: 12px;
-        white-space: nowrap;
+        white-space: normal; /* normal로 변경 */
         border-right: 1px solid #4a627a;
         text-align: center;
       }
       #mainReportTable td {
         padding: 7px 8px;
-        text-align: left; /* 요청하신 대로 왼쪽 정렬로 변경 */
+        text-align: left; /* left로 변경 */
         font-size: 12px;
         border-bottom: 1px solid #e0e0e0;
         border-right: 1px solid #e0e0e0;
-        white-space: nowrap;
+        white-space: normal; /* normal로 변경 */
       }
       #mainReportTable tr:hover td {
         background-color: #eaf5ff !important;
@@ -169,7 +161,7 @@
 
       #mainReportTable th:first-child {
         text-align: left;
-        width: 220px;
+        width: auto; /* auto로 변경 */
         padding-left: 5px !important;
       }
       .warehouse-row {
@@ -206,7 +198,7 @@
       .total-cell {
         font-weight: bold;
         border-left: 2px solid #aab8c5;
-        text-align: left; /* 요청하신 대로 왼쪽 정렬로 변경 */
+        text-align: left; /* left로 변경 */
       }
       .pct-positive {
         color: #27ae60;
@@ -222,7 +214,7 @@
     </style>
   </head>
   <body>
-    <h1><span id="nine-trigger">NINE</span> ACCORD 판매현황</h1>
+    <h1>NINE ACCORD 판매현황</h1>
     <div class="nav-container">
       <a
         href="{{ url_for('dashboard_main_view') }}"
@@ -295,7 +287,6 @@
       <canvas id="barChart"></canvas>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
