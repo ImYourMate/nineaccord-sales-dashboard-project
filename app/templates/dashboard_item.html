@@ -180,8 +180,8 @@
       #itemReportTable {
         border-collapse: collapse;
         width: 100%;
-        table-layout: auto; /* auto로 변경 */
         font-size: 12px;
+        table-layout: auto; /* auto로 변경 */
       }
       #itemReportTable th {
         position: sticky;
@@ -217,11 +217,11 @@
         text-align: left;
         width: auto; /* auto로 변경 */
         padding-left: 5px !important;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
       #itemReportTable td:first-child {
         text-align: left;
-        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
+        white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
       .collapsible-header {
         cursor: pointer;
@@ -366,5 +366,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard_item.js') }}"></script>
+    <footer>
+      <p>&copy; 2025 NINE ACCORD. 모든 권리 보유.</p>
+    </footer>
   </body>
 </html>
