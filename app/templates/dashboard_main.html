@@ -128,7 +128,7 @@
         border-collapse: collapse;
         width: 100%;
         margin-top: 5px;
-        table-layout: auto; /* auto로 변경 */
+        table-layout: auto;
         font-size: 12px;
       }
       #mainReportTable th {
@@ -139,17 +139,17 @@
         color: white;
         padding: 7px 8px;
         font-size: 12px;
-        white-space: normal; /* normal로 변경 */
+        white-space: normal;
         border-right: 1px solid #4a627a;
         text-align: center;
       }
       #mainReportTable td {
         padding: 7px 8px;
-        text-align: left; /* left로 변경 */
+        text-align: left;
         font-size: 12px;
         border-bottom: 1px solid #e0e0e0;
         border-right: 1px solid #e0e0e0;
-        white-space: normal; /* normal로 변경 */
+        white-space: normal;
       }
       #mainReportTable tr:hover td {
         background-color: #eaf5ff !important;
@@ -161,8 +161,9 @@
 
       #mainReportTable th:first-child {
         text-align: left;
-        width: auto; /* auto로 변경 */
+        width: auto;
         padding-left: 5px !important;
+        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
       }
       .warehouse-row {
         cursor: pointer;
@@ -176,6 +177,7 @@
         font-weight: bold;
         text-align: left;
         padding-left: 5px !important;
+        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
       }
       .category-row {
         display: none;
@@ -186,10 +188,12 @@
       .category-row td:first-child {
         text-align: left;
         padding-left: 20px !important;
+        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
       }
       .subtotal-row td:first-child {
         text-align: left !important;
         padding-left: 5px !important;
+        white-space: nowrap; /* 이 줄을 다시 추가합니다. */
       }
 
       td.negative {
@@ -198,7 +202,7 @@
       .total-cell {
         font-weight: bold;
         border-left: 2px solid #aab8c5;
-        text-align: left; /* left로 변경 */
+        text-align: left;
       }
       .pct-positive {
         color: #27ae60;
