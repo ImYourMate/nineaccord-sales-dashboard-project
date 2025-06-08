@@ -1,5 +1,4 @@
-# run.py (수정)
-
+# run.py
 import sys
 import os
 

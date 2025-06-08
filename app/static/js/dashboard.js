@@ -46,7 +46,7 @@ function addEventListenersToFilters() {
     window.location.reload();
   });
 
-  // --- NINE 글자에 클릭 이벤트 리스너 추가 시작 ---
+  // --- NINE 글자에 클릭 이벤트 리스너 복구 시작 ---
   const nineTrigger = document.getElementById('nine-trigger');
   if (nineTrigger) {
     nineTrigger.addEventListener('click', () => {
@@ -94,7 +94,7 @@ function addEventListenersToFilters() {
         });
     });
   }
-  // --- NINE 글자에 클릭 이벤트 리스너 추가 끝 ---
+  // --- NINE 글자에 클릭 이벤트 리스너 복구 끝 ---
 }
 
 // --- resetAllFilters 함수는 이제 필요 없으므로 삭제합니다. ---
