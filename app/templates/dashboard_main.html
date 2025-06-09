@@ -135,7 +135,7 @@
         border-collapse: collapse;
         width: 100%;
         margin-top: 5px;
-        table-layout: fixed; /* 다시 fixed로 변경 */
+        table-layout: auto; /* auto로 변경 */
         font-size: 12px;
       }
       #mainReportTable th {
@@ -152,7 +152,7 @@
       }
       #mainReportTable td {
         padding: 7px 8px;
-        text-align: left;
+        text-align: left; /* left로 변경 */
         font-size: 12px;
         border-bottom: 1px solid #e0e0e0;
         border-right: 1px solid #e0e0e0;
@@ -168,7 +168,7 @@
 
       #mainReportTable th:first-child {
         text-align: left;
-        width: 250px; /* 고정 너비로 변경 (예: 250px) */
+        width: auto; /* auto로 변경 */
         padding-left: 5px !important;
         white-space: nowrap; /* 다시 nowrap으로 변경 */
       }
@@ -222,7 +222,7 @@
         margin: 24px auto;
         height: 450px;
       }
-      /* Footer 스타일 */
+      /* Footer 스타일 추가 (dashboard_main.html 전용) */
       footer {
         text-align: center;
         margin-top: 20px;
