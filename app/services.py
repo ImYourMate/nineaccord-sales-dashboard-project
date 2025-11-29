@@ -28,11 +28,9 @@ def get_filter_options(brand):
     table_name = f"sales_data_{brand}"
     conn = _get_connection()
     try:
-        # 테이블 이름은 파라미터 바인딩이 안 되므로 f-string 사용 (내부 변수라 안전)
         query = f"SELECT DISTINCT warehouse, category, month_year FROM {table_name}"
         df = pd.read_sql_query(query, conn)
     except Exception:
-        # 테이블이 없거나 에러 발생 시 빈 리스트 반환
         return [], [], [], []
     finally:
         conn.close()
@@ -106,12 +104,10 @@ def process_data(brand, filters_tuple):
     df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], []
 
-    # 기본 집계 계산
     agg = df_main.groupby(['warehouse', 'category', 'month_str']).quantity.agg(net='sum', neg=lambda x: int(x[x<0].sum())).reset_index()
     months = sorted(df_main['month_str'].unique(), reverse=True)
     total_main = df_main.groupby(['warehouse', 'category']).quantity.agg(main_net='sum', main_neg=lambda x: int(x[x<0].sum())).reset_index()
 
-    # 비교년도 데이터 계산
     comp_data = None
     if filters.get('comp_year') and filters.get('comp_year') != filters.get('main_year'):
         df_comp = _get_base_data(brand, filters, for_comp_year=True)
@@ -120,18 +116,14 @@ def process_data(brand, filters_tuple):
 
     warehouses_all = agg['warehouse'].unique().tolist()
     
-    # ==========================================================================
     # [설정] 브랜드별 합계(소계)에 포함시킬 창고 목록 정의
-    # ==========================================================================
     BRAND_TARGETS = {
         'nine': ["안경원", "면세", "수출", "온라인주문", "클립"],
         'curu': ["안경원", "면세", "수출", "온라인주문"]
     }
     
-    # 현재 브랜드에 맞는 타겟 가져오기 (없으면 빈 리스트)
     subtotal_targets = BRAND_TARGETS.get(brand, [])
     
-    # 정렬 순서: 합계 대상들이 먼저 오고, 나머지가 뒤에 오도록 정렬
     others = sorted([w for w in warehouses_all if w not in subtotal_targets])
     final_order = [w for w in subtotal_targets if w in warehouses_all] + others
 
@@ -141,10 +133,8 @@ def process_data(brand, filters_tuple):
         total_sub['compare'] = {'net': 0, 'neg': 0}
         
     rows = []
-    is_total_added = False # 합계 행이 추가되었는지 체크하는 플래그
+    is_total_added = False
 
-    # ---------------------------------------------------------------
-    # 합계 행 생성 함수 (내부 헬퍼 함수)
     def create_total_row():
         row = {'name': '합계', 'is_subtotal': True, 'data': subtotals, 'total': total_sub}
         if comp_data is not None and 'compare' in total_sub:
@@ -152,14 +142,11 @@ def process_data(brand, filters_tuple):
             if total_sub['compare']['net'] != 0:
                 row['pct_change'] = round((total_sub['net'] - total_sub['compare']['net']) / abs(total_sub['compare']['net']) * 100, 1)
         return row
-    # ---------------------------------------------------------------
 
     for wh in final_order:
         tmp = agg[agg['warehouse'] == wh]
         if tmp.empty: continue
 
-        # [로직] 현재 창고가 합계 대상이 아니고, 아직 합계 행을 안 그렸다면 -> 지금 그립니다.
-        # 즉, 합계 대상들 출력이 다 끝나고 기타 항목이 시작되기 직전에 삽입합니다.
         if wh not in subtotal_targets and not is_total_added:
             rows.append(create_total_row())
             is_total_added = True
@@ -170,7 +157,6 @@ def process_data(brand, filters_tuple):
             net_val, neg_val = int(grp['net'].sum()), int(grp['neg'].sum())
             wh_row['data'][m] = {'net': net_val, 'neg': neg_val}
             
-            # 타겟에 포함된 창고만 합계에 누적
             if wh in subtotal_targets:
                 subtotals[m]['net'] += net_val
                 subtotals[m]['neg'] += neg_val
@@ -218,7 +204,6 @@ def process_data(brand, filters_tuple):
         
         rows.append(wh_row)
 
-    # [로직] 만약 모든 창고가 합계 대상이라서 루프 안에서 합계가 안 그려졌다면 -> 맨 마지막에 그립니다.
     if not is_total_added:
         rows.append(create_total_row())
     
@@ -227,20 +212,23 @@ def process_data(brand, filters_tuple):
 @cache.memoize()
 def process_item_data(brand, filters_tuple):
     """
-    품목 집계 데이터를 처리합니다. (브랜드 인자 추가됨)
+    품목 집계 데이터를 처리합니다.
     """
     filters = dict(filters_tuple)
     df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], [], []
 
+    # 차트용 데이터 (케이스 제외)
     df_for_chart = df_main[df_main['category'] != '케이스']
     series_sales = df_for_chart.groupby('series')['quantity'].sum().nlargest(10)
     top_series_data = [{'series': index, 'quantity': int(value)} for index, value in series_sales.items()]
     
     months = sorted(df_main['month_str'].unique(), reverse=True)
     
+    # 기본 집계
     agg = df_main.groupby(['category', 'series', 'item_name', 'month_str']).quantity.agg(net='sum', neg=lambda x: int(x[x<0].sum())).reset_index()
     
+    # 총 합계 및 재고 병합
     total_agg = agg.groupby(['category', 'series', 'item_name']).agg(total_net=('net', 'sum'), total_neg=('neg', 'sum')).reset_index()
     stock_agg = df_main.groupby('item_name')['stock'].max().reset_index()
     total_agg = pd.merge(total_agg, stock_agg, on='item_name', how='left').fillna(0)
@@ -252,6 +240,7 @@ def process_item_data(brand, filters_tuple):
     ordered_categories = [cat for cat in desired_order if cat in all_categories]
     ordered_categories += sorted([cat for cat in all_categories if cat not in desired_order])
     
+    # 합계에 포함시킬 카테고리 정의
     subtotal_targets = ["안경테", "선글라스", "클립"]
     subtotals = {m: {'net': 0, 'neg': 0} for m in months}
     subtotals['total'] = {'net': 0, 'neg': 0}
@@ -294,8 +283,8 @@ def process_item_data(brand, filters_tuple):
             subtotals['total']['neg'] += cat_row['total']['neg']
         rows.append(cat_row)
 
-        if cat_name == '클립':
-            subtotal_row = {'name': '합계', 'id': 'subtotal_row', 'level': 0, 'data': subtotals, 'total': subtotals['total']}
-            rows.append(subtotal_row)
+    # [수정] 합계 행을 모든 카테고리 처리 후 마지막에 무조건 추가
+    subtotal_row = {'name': '합계', 'id': 'subtotal_row', 'level': 0, 'data': subtotals, 'total': subtotals['total']}
+    rows.append(subtotal_row)
             
     return months, rows, top_series_data
