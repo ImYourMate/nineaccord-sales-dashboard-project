@@ -1,4 +1,4 @@
-# app/services.py (품목 집계 로직 완전 수정)
+# app/services.py
 
 import sqlite3
 import pandas as pd
@@ -93,16 +93,17 @@ def _get_base_data(brand, filters, for_comp_year=False):
 
 # ==============================================================================
 # [설정] 브랜드별 합계(소계) 계산 대상 정의
+# 여기에 정의된 항목들만 '합계' 행 계산에 포함되며, 합계 행 위쪽에 표시됩니다.
+# 정의되지 않은 항목은 합계 행 아래쪽에 나열됩니다.
 # ==============================================================================
-# 여기에 정의된 항목들만 '합계' 행 계산에 포함됩니다.
 BRAND_TARGETS = {
     'nine': {
-        'warehouse': ["안경원", "면세", "수출", "온라인주문", "클립"], # 메인 집계용
-        'category': ["안경테", "선글라스", "클립"]               # 품목 집계용
+        'warehouse': ["안경원", "면세", "수출", "온라인주문", "클립"], 
+        'category': ["안경테", "선글라스", "클립"] 
     },
     'curu': {
-        'warehouse': ["안경원", "면세", "수출", "온라인주문"],      # 메인 집계용
-        'category': ["안경테", "선글라스"]                        # 품목 집계용 (CURU에 맞게 설정)
+        'warehouse': ["안경원", "면세", "수출", "온라인주문"],      
+        'category': ["안경테", "선글라스"]                        
     }
 }
 
@@ -125,14 +126,11 @@ def process_data(brand, filters_tuple):
 
     warehouses_all = agg['warehouse'].unique().tolist()
     
-    # 설정 가져오기
+    # [설정 로드]
     target_config = BRAND_TARGETS.get(brand, {})
     subtotal_targets = target_config.get('warehouse', [])
     
-    # 만약 설정이 비어있다면, 모든 창고를 합계 대상으로 삼음 (안전장치)
-    if not subtotal_targets:
-        subtotal_targets = warehouses_all
-
+    # [정렬] 타겟(합계대상) 먼저, 그 외(Others) 나중에
     others = sorted([w for w in warehouses_all if w not in subtotal_targets])
     final_order = [w for w in subtotal_targets if w in warehouses_all] + others
 
@@ -156,6 +154,7 @@ def process_data(brand, filters_tuple):
         tmp = agg[agg['warehouse'] == wh]
         if tmp.empty: continue
 
+        # [로직] 현재 창고가 '기타' 그룹이고, 아직 합계 행을 안 그렸다면 -> 지금 그립니다.
         if wh not in subtotal_targets and not is_total_added:
             rows.append(create_total_row())
             is_total_added = True
@@ -240,22 +239,36 @@ def process_item_data(brand, filters_tuple):
 
     rows = []
     all_categories = agg['category'].unique()
-    desired_order = ["안경테", "선글라스", "클립", "모던"]
-    ordered_categories = [cat for cat in desired_order if cat in all_categories]
-    ordered_categories += sorted([cat for cat in all_categories if cat not in desired_order])
     
-    # [설정] 브랜드별 합계 대상 가져오기
+    # [설정 로드] 브랜드별 합계 대상(카테고리) 가져오기
     target_config = BRAND_TARGETS.get(brand, {})
     subtotal_targets = target_config.get('category', [])
     
-    # 안전장치: 설정이 없으면 모든 카테고리를 합계 대상으로
+    # 안전장치: 설정이 없으면 모든 카테고리를 대상으로 함
     if not subtotal_targets:
         subtotal_targets = list(all_categories)
 
+    # [정렬] 타겟(합계대상) 먼저, 그 외(Others) 나중에
+    others = sorted([cat for cat in all_categories if cat not in subtotal_targets])
+    ordered_categories = [cat for cat in subtotal_targets if cat in all_categories] + others
+
     subtotals = {m: {'net': 0, 'neg': 0} for m in months}
     subtotals['total'] = {'net': 0, 'neg': 0}
+    
+    is_total_added = False # 합계 행 추가 여부 체크
+
+    # ---------------------------------------------------------------
+    # 합계 행 생성 함수
+    def create_item_total_row():
+        return {'name': '합계', 'id': 'subtotal_row', 'level': 0, 'data': subtotals, 'total': subtotals['total']}
+    # ---------------------------------------------------------------
 
     for cat_name in ordered_categories:
+        # [로직] 현재 카테고리가 '기타' 그룹이고, 아직 합계를 안 그렸으면 -> 지금 그립니다.
+        if cat_name not in subtotal_targets and not is_total_added:
+            rows.append(create_item_total_row())
+            is_total_added = True
+
         cat_group = agg[agg['category'] == cat_name]
         cat_row = {'name': cat_name, 'id': f"cat_{cat_name}", 'level': 1, 'data': {}, 'children': []}
         
@@ -285,7 +298,7 @@ def process_item_data(brand, filters_tuple):
         cat_row['data'] = {m: {'net': sum(s['data'][m]['net'] for s in cat_row['children']), 'neg': sum(s['data'][m]['neg'] for s in cat_row['children'])} for m in months}
         cat_row['total'] = {'net': sum(s['total']['net'] for s in cat_row['children']), 'neg': sum(s['total']['neg'] for s in cat_row['children'])}
 
-        # [누적] 타겟에 포함된 카테고리라면 합계에 더하기
+        # [누적] 타겟에 포함된 카테고리만 합계에 누적
         if cat_name in subtotal_targets:
             for m in months:
                 subtotals[m]['net'] += cat_row['data'][m]['net']
@@ -294,8 +307,8 @@ def process_item_data(brand, filters_tuple):
             subtotals['total']['neg'] += cat_row['total']['neg']
         rows.append(cat_row)
 
-    # [수정] 합계 행은 무조건 마지막에 추가
-    subtotal_row = {'name': '합계', 'id': 'subtotal_row', 'level': 0, 'data': subtotals, 'total': subtotals['total']}
-    rows.append(subtotal_row)
+    # [로직] 반복문이 끝났는데 합계가 안 그려졌다면(모든 항목이 타겟인 경우) -> 마지막에 그립니다.
+    if not is_total_added:
+        rows.append(create_item_total_row())
             
     return months, rows, top_series_data
