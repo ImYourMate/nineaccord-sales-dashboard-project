@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initFilters() {
-  // [중요] URL에 currentBrand 적용
+  // [중요] URL에 currentBrand 적용 (데이터 조회는 현재 브랜드만)
   fetch(`/api/${currentBrand}/filters`)
     .then((res) => res.json())
     .then((data) => {
@@ -47,9 +47,10 @@ function addEventListenersToFilters() {
   const nineTrigger = document.getElementById('nine-trigger');
   if (nineTrigger) {
     nineTrigger.addEventListener('click', () => {
+      // [수정] 전체 업데이트 안내 메시지
       if (
         !confirm(
-          `[${currentBrand.toUpperCase()}] 데이터 업데이트 기능을 실행하시겠습니까?`
+          '모든 브랜드(NINE + CURU)의 데이터 업데이트를 진행하시겠습니까?\n데이터 양에 따라 시간이 소요될 수 있습니다.'
         )
       ) {
         return;
@@ -58,8 +59,8 @@ function addEventListenersToFilters() {
       showLoading('mainReportTable');
       handleError('');
 
-      // [중요] URL에 currentBrand 적용
-      const updateUrl = `/api/${currentBrand}/update-data`;
+      // [수정] 무조건 'all'로 호출하여 전체 업데이트 실행
+      const updateUrl = `/api/all/update-data`;
 
       fetch(updateUrl)
         .then((response) => {
@@ -74,7 +75,9 @@ function addEventListenersToFilters() {
         })
         .then((data) => {
           if (data.status === 'success') {
-            alert('업데이트 완료. 페이지를 새로고침합니다.');
+            alert(
+              '모든 데이터 업데이트가 완료되었습니다.\n페이지를 새로고침합니다.'
+            );
             window.location.reload();
           } else {
             handleError(`업데이트 실패: ${data.message}`);
