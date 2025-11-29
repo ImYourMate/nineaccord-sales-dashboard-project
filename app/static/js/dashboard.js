@@ -1,6 +1,6 @@
 // app/static/js/dashboard.js
 
-// 전역 변수들은 그대로 둡니다.
+// 전역 변수들
 let allWarehouses = [];
 let allCategories = [];
 let allYears = [];
@@ -8,16 +8,15 @@ let allMonths = [];
 let chartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- 수정: 접기/펼치기 기능을 페이지 로드 시 단 한 번만 초기화 ---
   initCollapse('mainTableBody');
   initFilters();
 });
 
 function initFilters() {
-  fetch('/api/filters')
+  // [중요] URL에 currentBrand 적용
+  fetch(`/api/${currentBrand}/filters`)
     .then((res) => res.json())
     .then((data) => {
-      // 전역 변수에 데이터 할당
       allWarehouses = data.warehouses;
       allCategories = data.categories;
       allYears = data.years;
@@ -41,29 +40,26 @@ function addEventListenersToFilters() {
     .getElementById('apply-filters')
     .addEventListener('click', fetchAndRender);
 
-  // --- 수정: '전체 초기화' 버튼의 동작을 페이지 새로고침으로 변경 ---
   document.getElementById('reset-filters').addEventListener('click', () => {
     window.location.reload();
   });
 
-  // --- NINE 글자에 클릭 이벤트 리스너 복구 시작 ---
   const nineTrigger = document.getElementById('nine-trigger');
   if (nineTrigger) {
     nineTrigger.addEventListener('click', () => {
-      // 사용자에게 확인 메시지 띄우기
       if (
         !confirm(
-          '숨겨진 데이터 업데이트 기능을 실행하시겠습니까? 데이터 업데이트에는 시간이 걸릴 수 있습니다.'
+          `[${currentBrand.toUpperCase()}] 데이터 업데이트 기능을 실행하시겠습니까?`
         )
       ) {
-        return; // 사용자가 취소하면 아무것도 하지 않음
+        return;
       }
 
-      showLoading('mainReportTable'); // 로딩 메시지 표시
-      handleError(''); // 기존 에러 메시지 초기화
+      showLoading('mainReportTable');
+      handleError('');
 
-      // 서버 측에서 세션 인증을 사용하므로 클라이언트에서 키를 전달할 필요 없음
-      const updateUrl = '/api/update-data';
+      // [중요] URL에 currentBrand 적용
+      const updateUrl = `/api/${currentBrand}/update-data`;
 
       fetch(updateUrl)
         .then((response) => {
@@ -78,31 +74,24 @@ function addEventListenersToFilters() {
         })
         .then((data) => {
           if (data.status === 'success') {
-            alert('데이터 업데이트가 완료되었습니다. 페이지를 새로고침합니다.');
-            window.location.reload(); // 데이터 업데이트 후 페이지 새로고침
+            alert('업데이트 완료. 페이지를 새로고침합니다.');
+            window.location.reload();
           } else {
-            handleError(
-              `데이터 업데이트 실패: ${data.message} ${
-                data.details ? `(상세: ${data.details})` : ''
-              }`
-            );
+            handleError(`업데이트 실패: ${data.message}`);
           }
         })
         .catch((error) => {
-          handleError(`데이터 업데이트 중 오류 발생: ${error.message}`);
-          console.error('Update error:', error);
+          handleError(`오류 발생: ${error.message}`);
         });
     });
   }
-  // --- NINE 글자에 클릭 이벤트 리스너 복구 끝 ---
 }
-
-// --- resetAllFilters 함수는 이제 필요 없으므로 삭제합니다. ---
 
 function fetchAndRender() {
   showLoading('mainReportTable');
   const qs = buildQueryString();
-  fetch(`/api/data?${qs}`) // API 경로 확인
+  // [중요] URL에 currentBrand 적용
+  fetch(`/api/${currentBrand}/data?${qs}`)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       return res.json();
@@ -114,7 +103,7 @@ function fetchAndRender() {
       showTable('mainReportTable');
     })
     .catch((err) =>
-      handleError('데이터 로드 중 오류 발생: ' + err.message, 'mainReportTable')
+      handleError('데이터 로드 중 오류: ' + err.message, 'mainReportTable')
     );
 }
 
@@ -154,10 +143,11 @@ function buildTable(months, rows) {
         (r.categories && r.categories.some((c) => 'compare' in c))
     );
 
+  // [총 합계 헤더 위치 이동]
   const headerRow = `<tr>
     <th>창고 / 구분</th>
-    ${months.map((m) => `<th colspan="2">${m}</th>`).join('')}
     <th colspan="2" class="total-header">총 합계 ${mainYear}</th>
+    ${months.map((m) => `<th colspan="2">${m}</th>`).join('')}
     ${
       hasCompare
         ? `<th colspan="2" class="total-header">비교 합계 ${compYear}</th><th>증감률(%)</th>`
@@ -166,7 +156,6 @@ function buildTable(months, rows) {
     </tr>`;
   hdr.innerHTML = headerRow;
   bdy.innerHTML = rows.map((r) => buildRow(r, months, hasCompare)).join('');
-  // initCollapse 호출을 여기서 제거했습니다.
 }
 
 function buildRow(row, months, hasCompare) {
@@ -188,13 +177,14 @@ function buildRow(row, months, hasCompare) {
 
   html += `<tr class="${rowClass}" ${attrs}><td>${row.name}</td>`;
 
+  // [총 합계 셀 위치 이동]
+  const t = row.total || { net: 0, neg: 0 };
+  html += `<td class="total-cell">${t.net.toLocaleString()}</td><td class="total-cell negative">${t.neg.toLocaleString()}</td>`;
+
   months.forEach((m) => {
     const d = row.data[m] || { net: 0, neg: 0 };
     html += `<td>${d.net.toLocaleString()}</td><td class="negative">${d.neg.toLocaleString()}</td>`;
   });
-
-  const t = row.total || { net: 0, neg: 0 };
-  html += `<td class="total-cell">${t.net.toLocaleString()}</td><td class="total-cell negative">${t.neg.toLocaleString()}</td>`;
 
   if (hasCompare) {
     const c = row.compare || { net: 0, neg: 0 };

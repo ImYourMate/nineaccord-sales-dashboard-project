@@ -3,13 +3,13 @@
 let pieChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- 수정: 접기/펼치기 기능을 페이지 로드 시 단 한 번만 초기화 ---
   initCollapse('itemTableBody');
   initFilters();
 });
 
 function initFilters() {
-  fetch('/api/filters')
+  // [중요] URL에 currentBrand 적용
+  fetch(`/api/${currentBrand}/filters`)
     .then((res) => res.json())
     .then((data) => {
       populateSlicer('warehouse-filter', ['전체', ...data.warehouses], true);
@@ -28,7 +28,6 @@ function addEventListenersToFilters() {
     .getElementById('apply-filters')
     .addEventListener('click', fetchAndRender);
 
-  // --- 수정: '전체 초기화' 버튼의 동작을 페이지 새로고침으로 변경 ---
   document.getElementById('reset-filters').addEventListener('click', () => {
     window.location.reload();
   });
@@ -38,12 +37,11 @@ function addEventListenersToFilters() {
     .addEventListener('input', applyLiveSearch);
 }
 
-// --- resetAllFilters 함수는 이제 필요 없으므로 삭제합니다. ---
-
 function fetchAndRender() {
   showLoading('itemReportTable');
   const qs = buildQueryString();
-  fetch(`/api/data/item?${qs}`)
+  // [중요] URL에 currentBrand 적용
+  fetch(`/api/${currentBrand}/data/item?${qs}`)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       return res.json();
@@ -83,14 +81,16 @@ function buildTable(months, rows) {
   hdr.innerHTML = '';
   bdy.innerHTML = '';
   const mainYear = document.getElementById('main-year').value || '----';
+
+  // [총 합계 헤더 위치 이동]
   const headerHTML = `<tr>
     <th>구분 / 시리즈 / 품목</th>
-    ${months.map((m) => `<th colspan="2">${m}</th>`).join('')}
     <th colspan="2" class="total-header">총 합계 ${mainYear}</th>
+    ${months.map((m) => `<th colspan="2">${m}</th>`).join('')}
   </tr>`;
+
   hdr.innerHTML = headerHTML;
   bdy.innerHTML = rows.map((row) => buildRowRecursive(row, months)).join('');
-  // initCollapse 호출을 여기서 제거했습니다.
 }
 
 function buildRowRecursive(row, months) {
@@ -107,6 +107,11 @@ function buildRowRecursive(row, months) {
   }
   nameCell += '</td>';
   html += nameCell;
+
+  // [총 합계 셀 위치 이동]
+  const total = row.total;
+  html += `<td class="total-cell">${total.net.toLocaleString()}</td><td class="total-cell negative">${total.neg.toLocaleString()}</td>`;
+
   months.forEach((m) => {
     const d = row.data[m] || { net: 0, neg: 0 };
     let netCellClass = '';
@@ -117,8 +122,7 @@ function buildRowRecursive(row, months) {
     }
     html += `<td class="${netCellClass}">${d.net.toLocaleString()}</td><td class="${negCellClass}">${d.neg.toLocaleString()}</td>`;
   });
-  const total = row.total;
-  html += `<td class="total-cell">${total.net.toLocaleString()}</td><td class="total-cell negative">${total.neg.toLocaleString()}</td>`;
+
   html += `</tr>`;
   if (row.children && row.children.length > 0) {
     row.children.forEach((child) => (html += buildRowRecursive(child, months)));

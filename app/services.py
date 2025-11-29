@@ -21,13 +21,21 @@ def _safe_int(x):
         return 0
 
 @cache.memoize()
-def get_filter_options():
+def get_filter_options(brand):
     """
-    필터링에 사용할 모든 옵션 목록을 DB에서 가져옵니다.
+    브랜드별 테이블에서 필터 옵션을 가져옵니다.
     """
+    table_name = f"sales_data_{brand}"
     conn = _get_connection()
-    df = pd.read_sql_query("SELECT DISTINCT warehouse, category, month_year FROM sales_data", conn)
-    conn.close()
+    try:
+        # 테이블 이름은 바인딩이 안 되므로 f-string 사용 (내부 변수라 안전)
+        query = f"SELECT DISTINCT warehouse, category, month_year FROM {table_name}"
+        df = pd.read_sql_query(query, conn)
+    except Exception:
+        # 테이블이 아직 생성되지 않았거나 오류 발생 시 빈 리스트 반환
+        return [], [], [], []
+    finally:
+        conn.close()
 
     if df.empty:
         return [], [], [], []
@@ -45,11 +53,12 @@ def get_filter_options():
     
     return warehouses, categories, [str(y) for y in years], [str(m).zfill(2) for m in months]
 
-def _get_base_data(filters, for_comp_year=False):
+def _get_base_data(brand, filters, for_comp_year=False):
     """
-    필터 조건에 따라 DB에서 필요한 데이터만 효율적으로 조회합니다.
+    브랜드별 테이블에서 필터 조건에 따라 데이터를 조회합니다.
     """
-    query_parts = ["SELECT warehouse, category, series, item_name, month_year, quantity, stock FROM sales_data WHERE 1=1"]
+    table_name = f"sales_data_{brand}"
+    query_parts = [f"SELECT warehouse, category, series, item_name, month_year, quantity, stock FROM {table_name} WHERE 1=1"]
     params = []
 
     year_key = 'comp_year' if for_comp_year else 'main_year'
@@ -75,7 +84,10 @@ def _get_base_data(filters, for_comp_year=False):
         params.extend(filters['categories'])
 
     conn = _get_connection()
-    df = pd.read_sql_query(' '.join(query_parts), conn, params=params)
+    try:
+        df = pd.read_sql_query(' '.join(query_parts), conn, params=params)
+    except Exception:
+        df = pd.DataFrame()
     conn.close()
     
     if not df.empty:
@@ -86,12 +98,13 @@ def _get_base_data(filters, for_comp_year=False):
     return df
 
 @cache.memoize()
-def process_data(filters_tuple):
+def process_data(brand, filters_tuple):
     """
-    메인 집계 데이터를 처리합니다. (최적화된 버전)
+    메인 집계 데이터를 처리합니다. (브랜드 인자 추가됨)
     """
     filters = dict(filters_tuple)
-    df_main = _get_base_data(filters)
+    # brand 인자를 전달하여 데이터 조회
+    df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], []
 
     agg = df_main.groupby(['warehouse', 'category', 'month_str']).quantity.agg(net='sum', neg=lambda x: int(x[x<0].sum())).reset_index()
@@ -100,7 +113,8 @@ def process_data(filters_tuple):
 
     comp_data = None
     if filters.get('comp_year') and filters.get('comp_year') != filters.get('main_year'):
-        df_comp = _get_base_data(filters, for_comp_year=True)
+        # brand 인자 전달
+        df_comp = _get_base_data(brand, filters, for_comp_year=True)
         if not df_comp.empty:
             comp_data = df_comp.groupby(['warehouse', 'category']).quantity.agg(comp_net='sum', comp_neg=lambda x: int(x[x<0].sum())).reset_index()
 
@@ -182,12 +196,13 @@ def process_data(filters_tuple):
     return months, rows
 
 @cache.memoize()
-def process_item_data(filters_tuple):
+def process_item_data(brand, filters_tuple):
     """
-    품목 집계 데이터를 처리합니다. (최적화된 버전)
+    품목 집계 데이터를 처리합니다. (브랜드 인자 추가됨)
     """
     filters = dict(filters_tuple)
-    df_main = _get_base_data(filters)
+    # brand 인자 전달
+    df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], [], []
 
     df_for_chart = df_main[df_main['category'] != '케이스']
@@ -196,8 +211,6 @@ def process_item_data(filters_tuple):
     
     months = sorted(df_main['month_str'].unique(), reverse=True)
     
-    # --- ★★★ 수정된 부분 ★★★ ---
-    # .quantity 를 추가하여 집계할 컬럼을 명확히 지정합니다.
     agg = df_main.groupby(['category', 'series', 'item_name', 'month_str']).quantity.agg(net='sum', neg=lambda x: int(x[x<0].sum())).reset_index()
     
     total_agg = agg.groupby(['category', 'series', 'item_name']).agg(total_net=('net', 'sum'), total_neg=('neg', 'sum')).reset_index()

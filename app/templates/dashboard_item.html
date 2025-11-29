@@ -6,8 +6,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>NINE ACCORD - 품목별 집계</title>
+    <title>{{ brand_name }} - 품목별 집계</title>
     <style>
+      /* 기존 스타일 유지 */
       body {
         font-family: Arial, '맑은 고딕', Malgun Gothic, sans-serif;
         margin: 8px;
@@ -130,7 +131,6 @@
         border-left: 1px solid darkgray;
         border-right: 1px solid darkgray;
       }
-
       .chart-rank-container {
         display: flex;
         justify-content: center;
@@ -176,7 +176,6 @@
         font-weight: bold;
         color: #555;
       }
-
       #itemReportTable {
         border-collapse: collapse;
         width: 100%;
@@ -203,8 +202,9 @@
       }
       #itemReportTable .total-cell {
         font-weight: bold;
-        border-left: 2px solid darkgray;
+        border-right: 2px solid #aab8c5; /* 오른쪽 테두리로 수정됨 */
         text-align: left;
+        background-color: #fff9e6;
       }
       #itemReportTable tr:hover td {
         background-color: #eaf5ff !important;
@@ -212,7 +212,6 @@
       td.negative {
         color: red;
       }
-
       #itemReportTable th:first-child {
         text-align: left;
         width: auto;
@@ -250,7 +249,6 @@
       .level-3 td:first-child {
         padding-left: 40px !important;
       }
-
       tr[data-parent-id] {
         display: none;
       }
@@ -262,35 +260,44 @@
         font-weight: bold;
         margin-left: 8px;
       }
-      .pct-positive {
-        color: #27ae60;
-      }
-      .pct-negative {
-        color: #e74c3c;
-      }
       .highlight-bold {
         font-weight: bold !important;
       }
-      /* Footer 스타일 추가 */
       footer {
         text-align: center;
-        margin-top: 20px; /* 위쪽 여백 */
+        margin-top: 20px;
         padding: 10px;
-        font-size: 10px; /* 폰트 사이즈 10px */
-        color: #a0a0a0; /* 연한 회색 */
+        font-size: 10px;
+        color: #a0a0a0;
       }
     </style>
+    <script>
+      const currentBrand = '{{ brand_code }}';
+    </script>
   </head>
   <body>
-    <h1>NINE ACCORD 품목별 판매현황</h1>
+    <h1>{{ brand_name }} 품목별 판매현황</h1>
     <div class="nav-container">
-      <a href="{{ url_for('dashboard_main_view') }}">[메인집계]</a>
+      <a href="{{ url_for('dashboard_main_view', brand=brand_code) }}"
+        >[메인집계]</a
+      >
       <a
-        href="{{ url_for('dashboard_item_view') }}"
+        href="{{ url_for('dashboard_item_view', brand=brand_code) }}"
         class="active"
         >[품목집계]</a
       >
+      <a
+        href="{{ url_for('dashboard_item_view', brand='nine') }}"
+        style="margin-left: 20px; font-size: 11px; opacity: 0.7"
+        >NINE</a
+      >
+      <a
+        href="{{ url_for('dashboard_item_view', brand='curu') }}"
+        style="font-size: 11px; opacity: 0.7"
+        >CURU</a
+      >
     </div>
+
     <div class="filter-container">
       <div class="filter-group">
         <label>창고 선택</label>
@@ -375,7 +382,7 @@
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard_item.js') }}"></script>
     <footer>
-      <p>&copy; 2025 NINE ACCORD. 모든 권리 보유.</p>
+      <p>&copy; 2025 {{ brand_name }}. 모든 권리 보유.</p>
     </footer>
   </body>
 </html>
