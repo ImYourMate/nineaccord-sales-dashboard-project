@@ -26,6 +26,7 @@ pip install -r requirements.txt
 
 python database_setup.py
 python migrate_data.py nine
+python migrate_data.py curu
 
 systemctl restart nineaccord-sales-dashboard-project
 systemctl restart nginx

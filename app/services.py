@@ -1,4 +1,4 @@
-# app/services.py
+# app/services.py (Final Fix)
 
 import sqlite3
 import pandas as pd
@@ -22,9 +22,6 @@ def _safe_int(x):
 
 @cache.memoize()
 def get_filter_options(brand):
-    """
-    브랜드별 테이블에서 필터링에 사용할 옵션 목록을 가져옵니다.
-    """
     table_name = f"sales_data_{brand}"
     conn = _get_connection()
     try:
@@ -52,9 +49,6 @@ def get_filter_options(brand):
     return warehouses, categories, [str(y) for y in years], [str(m).zfill(2) for m in months]
 
 def _get_base_data(brand, filters, for_comp_year=False):
-    """
-    브랜드별 테이블에서 필터 조건에 맞는 데이터를 효율적으로 조회합니다.
-    """
     table_name = f"sales_data_{brand}"
     query_parts = [f"SELECT warehouse, category, series, item_name, month_year, quantity, stock FROM {table_name} WHERE 1=1"]
     params = []
@@ -97,9 +91,7 @@ def _get_base_data(brand, filters, for_comp_year=False):
 
 @cache.memoize()
 def process_data(brand, filters_tuple):
-    """
-    메인 집계 데이터를 처리합니다. (브랜드별 합계 설정 적용)
-    """
+    """메인 집계 데이터 처리"""
     filters = dict(filters_tuple)
     df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], []
@@ -116,12 +108,11 @@ def process_data(brand, filters_tuple):
 
     warehouses_all = agg['warehouse'].unique().tolist()
     
-    # [설정] 브랜드별 합계(소계)에 포함시킬 창고 목록 정의
+    # 브랜드별 합계 타겟 설정
     BRAND_TARGETS = {
         'nine': ["안경원", "면세", "수출", "온라인주문", "클립"],
         'curu': ["안경원", "면세", "수출", "온라인주문"]
     }
-    
     subtotal_targets = BRAND_TARGETS.get(brand, [])
     
     others = sorted([w for w in warehouses_all if w not in subtotal_targets])
@@ -211,24 +202,19 @@ def process_data(brand, filters_tuple):
 
 @cache.memoize()
 def process_item_data(brand, filters_tuple):
-    """
-    품목 집계 데이터를 처리합니다.
-    """
+    """품목 집계 데이터 처리"""
     filters = dict(filters_tuple)
     df_main = _get_base_data(brand, filters)
     if df_main.empty: return [], [], []
 
-    # 차트용 데이터 (케이스 제외)
     df_for_chart = df_main[df_main['category'] != '케이스']
     series_sales = df_for_chart.groupby('series')['quantity'].sum().nlargest(10)
     top_series_data = [{'series': index, 'quantity': int(value)} for index, value in series_sales.items()]
     
     months = sorted(df_main['month_str'].unique(), reverse=True)
     
-    # 기본 집계
     agg = df_main.groupby(['category', 'series', 'item_name', 'month_str']).quantity.agg(net='sum', neg=lambda x: int(x[x<0].sum())).reset_index()
     
-    # 총 합계 및 재고 병합
     total_agg = agg.groupby(['category', 'series', 'item_name']).agg(total_net=('net', 'sum'), total_neg=('neg', 'sum')).reset_index()
     stock_agg = df_main.groupby('item_name')['stock'].max().reset_index()
     total_agg = pd.merge(total_agg, stock_agg, on='item_name', how='left').fillna(0)
@@ -240,7 +226,6 @@ def process_item_data(brand, filters_tuple):
     ordered_categories = [cat for cat in desired_order if cat in all_categories]
     ordered_categories += sorted([cat for cat in all_categories if cat not in desired_order])
     
-    # 합계에 포함시킬 카테고리 정의
     subtotal_targets = ["안경테", "선글라스", "클립"]
     subtotals = {m: {'net': 0, 'neg': 0} for m in months}
     subtotals['total'] = {'net': 0, 'neg': 0}
@@ -283,7 +268,7 @@ def process_item_data(brand, filters_tuple):
             subtotals['total']['neg'] += cat_row['total']['neg']
         rows.append(cat_row)
 
-    # [수정] 합계 행을 모든 카테고리 처리 후 마지막에 무조건 추가
+    # [수정] 반복문 종료 후 무조건 합계 행 추가 (클립 여부와 상관없음)
     subtotal_row = {'name': '합계', 'id': 'subtotal_row', 'level': 0, 'data': subtotals, 'total': subtotals['total']}
     rows.append(subtotal_row)
             
