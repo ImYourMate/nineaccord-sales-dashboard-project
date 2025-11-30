@@ -3,12 +3,12 @@
 let pieChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 접기/펼치기 기능 활성화 (이벤트 위임 방식이므로 한 번만 호출하면 됨)
   initCollapse('itemTableBody');
   initFilters();
 });
 
 function initFilters() {
-  // [중요] URL에 currentBrand 적용
   fetch(`/api/${currentBrand}/filters`)
     .then((res) => res.json())
     .then((data) => {
@@ -27,20 +27,33 @@ function addEventListenersToFilters() {
   document
     .getElementById('apply-filters')
     .addEventListener('click', fetchAndRender);
-
   document.getElementById('reset-filters').addEventListener('click', () => {
     window.location.reload();
   });
 
-  document
-    .getElementById('item-search')
-    .addEventListener('input', applyLiveSearch);
+  // 검색 버튼 및 엔터키 이벤트
+  const searchInput = document.getElementById('item-search');
+  const searchBtn = document.getElementById('btn-search');
+
+  if (searchBtn) {
+    searchBtn.addEventListener('click', applySearch);
+  }
+  if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') applySearch();
+    });
+    // (선택사항) 검색어를 다 지웠을 때 자동으로 초기화하고 싶다면 아래 주석 해제
+    /*
+    searchInput.addEventListener('input', (e) => {
+      if (e.target.value === '') applySearch();
+    });
+    */
+  }
 }
 
 function fetchAndRender() {
   showLoading('itemReportTable');
   const qs = buildQueryString();
-  // [중요] URL에 currentBrand 적용
   fetch(`/api/${currentBrand}/data/item?${qs}`)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -82,7 +95,6 @@ function buildTable(months, rows) {
   bdy.innerHTML = '';
   const mainYear = document.getElementById('main-year').value || '----';
 
-  // [총 합계 헤더 위치 이동]
   const headerHTML = `<tr>
     <th>구분 / 시리즈 / 품목</th>
     <th colspan="2" class="total-header">총 합계 ${mainYear}</th>
@@ -101,14 +113,17 @@ function buildRowRecursive(row, months) {
   if (!isItemRow && !isSubtotalRow) rowClass += ' collapsible-header';
   const parentAttr = row.parentId ? `data-parent-id="${row.parentId}"` : '';
   html += `<tr class="${rowClass}" data-group-id="${row.id}" ${parentAttr}>`;
+
   let nameCell = `<td>${row.name}`;
   if (isItemRow) {
     nameCell += `<span class="stock-quantity">[${row.stock}]</span>`;
+    if (row.backorder && row.backorder > 0) {
+      nameCell += `<span style="color: #e67e22; font-weight: bold; margin-left: 5px;">(미입고: ${row.backorder})</span>`;
+    }
   }
   nameCell += '</td>';
   html += nameCell;
 
-  // [총 합계 셀 위치 이동]
   const total = row.total;
   html += `<td class="total-cell">${total.net.toLocaleString()}</td><td class="total-cell negative">${total.neg.toLocaleString()}</td>`;
 
@@ -158,12 +173,12 @@ function renderChartAndRank(seriesData) {
     .map(
       (d, index) =>
         `<li data-series-name="${d.series}">
-            <span class="color-swatch" style="background-color: ${
-              chartColors[index % chartColors.length]
-            };"></span>
-            <span class="rank-number">${index + 1}.</span>
-            ${d.series}
-        </li>`
+        <span class="color-swatch" style="background-color: ${
+          chartColors[index % chartColors.length]
+        };"></span>
+        <span class="rank-number">${index + 1}.</span>
+        ${d.series}
+    </li>`
     )
     .join('');
   rankList.innerHTML = `<ol>${listHtml}</ol>`;
@@ -202,33 +217,38 @@ function renderChartAndRank(seriesData) {
 function handleSeriesClick(seriesName) {
   const searchInput = document.getElementById('item-search');
   searchInput.value = seriesName;
-  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+  applySearch();
 }
 
-function applyLiveSearch(event) {
-  const searchTerm = event.target.value.toLowerCase();
+/**
+ * [핵심 수정] 검색 적용 및 초기화 로직
+ */
+function applySearch() {
+  const searchInput = document.getElementById('item-search');
+  const searchTerm = searchInput.value.toLowerCase();
   const tbody = document.getElementById('itemTableBody');
   if (!tbody) return;
   const allTrs = Array.from(tbody.querySelectorAll('tr'));
+
+  // 1. 검색어가 없을 때 (초기화)
   if (!searchTerm) {
     allTrs.forEach((tr) => {
+      // ★ 중요: 강제로 부여했던 inline display 스타일을 제거합니다.
+      // 이렇게 해야 CSS의 기본 동작(접기/펼치기)이 다시 살아납니다.
       tr.style.display = '';
-      const isChild = tr.dataset.parentId;
-      if (isChild) {
-        const header = tbody.querySelector(
-          `[data-group-id="${tr.dataset.parentId}"]`
-        );
-        if (!header || !header.classList.contains('open')) {
-          tr.classList.remove('visible');
-          tr.style.display = 'none';
-        }
-      }
+
+      // 검색으로 펼쳐졌던 것들을 다시 닫힌 상태로 되돌립니다.
+      tr.classList.remove('visible');
+      tr.classList.remove('open');
     });
     return;
   }
+
+  // 2. 검색어가 있을 때
   const visibleRows = new Set();
   allTrs.forEach((tr) => {
     if (tr.classList.contains('level-3')) {
+      // 품목명 검색
       const itemName = tr
         .querySelector('td:first-child')
         .textContent.toLowerCase();
@@ -245,11 +265,19 @@ function applyLiveSearch(event) {
       }
     }
   });
+
   allTrs.forEach((tr) => {
     const groupId = tr.dataset.groupId;
-    tr.style.display =
-      tr.classList.contains('level-0') || visibleRows.has(groupId)
-        ? 'table-row'
-        : 'none';
+    // 합계행(level-0)이나 검색된 그룹에 포함되면 강제로 보여줌
+    if (tr.classList.contains('level-0') || visibleRows.has(groupId)) {
+      tr.style.display = 'table-row'; // 강제 표시
+      tr.classList.add('visible');
+      // 품목(level-3)이 아니면(부모면) 펼침 아이콘 표시
+      if (!tr.classList.contains('level-3')) {
+        tr.classList.add('open');
+      }
+    } else {
+      tr.style.display = 'none'; // 강제 숨김
+    }
   });
 }

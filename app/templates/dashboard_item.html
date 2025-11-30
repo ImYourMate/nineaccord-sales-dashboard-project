@@ -8,7 +8,7 @@
     />
     <title>{{ brand_name }} - 품목별 집계</title>
     <style>
-      /* 기존 스타일 유지 */
+      /* 기존 스타일 유지 (생략) */
       body {
         font-family: Arial, '맑은 고딕', Malgun Gothic, sans-serif;
         margin: 8px;
@@ -125,6 +125,7 @@
       .error-message {
         color: red;
       }
+      /* 검색 UI 스타일 수정 */
       .search-wrapper {
         background: #f8f9fa;
         padding: 10px;
@@ -202,7 +203,7 @@
       }
       #itemReportTable .total-cell {
         font-weight: bold;
-        border-right: 2px solid #aab8c5; /* 오른쪽 테두리로 수정됨 */
+        border-right: 2px solid #aab8c5;
         text-align: left;
         background-color: #fff9e6;
       }
@@ -289,12 +290,12 @@
       <a
         href="{{ url_for('dashboard_item_view', brand='nine') }}"
         style="margin-left: 20px; font-size: 11px; opacity: 0.7"
-        >NINE</a
+        >Nine</a
       >
       <a
         href="{{ url_for('dashboard_item_view', brand='curu') }}"
         style="font-size: 11px; opacity: 0.7"
-        >CURU</a
+        >Curu</a
       >
     </div>
 
@@ -318,7 +319,7 @@
         <select id="main-year"></select>
       </div>
       <div class="filter-group">
-        <label for="comp-year">X</label>
+        <label for="comp-year">비교년도</label>
         <select
           id="comp-year"
           disabled
@@ -347,16 +348,39 @@
         <ol id="seriesRankList"></ol>
       </div>
     </div>
+
     <div class="search-wrapper">
-      <div class="filter-group">
-        <label for="item-search">품목 검색</label>
+      <div
+        class="filter-group"
+        style="flex-direction: row; align-items: center; gap: 5px"
+      >
+        <label
+          for="item-search"
+          style="margin: 0"
+          >품목 검색:</label
+        >
         <input
           type="search"
           id="item-search"
-          placeholder="품목명 입력..."
+          placeholder="품목명 입력 (Enter)"
+          style="width: 200px"
         />
+        <button
+          id="btn-search"
+          style="
+            padding: 5px 10px;
+            background-color: #34495e;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+          "
+        >
+          검색
+        </button>
       </div>
     </div>
+
     <div class="content">
       <div
         id="mainLoading"
@@ -380,7 +404,7 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dashboard_item.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard_item.js') }}?v=2"></script>
     <footer>
       <p>&copy; 2025 {{ brand_name }}. 모든 권리 보유.</p>
     </footer>

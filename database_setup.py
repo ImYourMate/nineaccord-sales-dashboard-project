@@ -1,4 +1,3 @@
-# database_setup.py
 import sqlite3
 
 DATABASE_NAME = 'sales.db'
@@ -9,6 +8,7 @@ def create_table():
     with sqlite3.connect(DATABASE_NAME) as conn:
         for brand in BRANDS:
             table_name = f"sales_data_{brand}"
+            # [수정] backorder 컬럼 추가
             conn.execute(
                 f'''
                 CREATE TABLE IF NOT EXISTS {table_name} (
@@ -20,6 +20,7 @@ def create_table():
                     quantity INTEGER NOT NULL,
                     series TEXT,
                     stock INTEGER,
+                    backorder INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 '''
