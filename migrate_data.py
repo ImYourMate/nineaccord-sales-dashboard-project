@@ -18,8 +18,8 @@ GOOGLE_SHEET_NAME = 'NINE ACCORD 판매현황' # 액세스할 구글 시트 이�
 
 # 브랜드별 탭 매핑 설정
 BRAND_CONFIG = {
-    'nine': {'sheet_tab': '사이트DB', 'table': 'sales_data_nine'},
-    'curu': {'sheet_tab': '쿠루누루DB', 'table': 'sales_data_curu'}
+    'nine': {'sheet_tab': 'DB_나인', 'table': 'sales_data_nine'},
+    'curu': {'sheet_tab': 'DB_쿠루', 'table': 'sales_data_curu'}
 }
 
 def clean_data(df):
